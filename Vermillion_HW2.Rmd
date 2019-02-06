@@ -1,0 +1,200 @@
+---
+title: "Vermillion HW2"
+author: "Monica Vermillion"
+date: "February 4, 2019"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+Questions 1 
+(a) 
+```{r,echo=false}
+setwd("H:/HierarchicalModel/Homework/homework2-master") 
+seeds<- read.csv("Seeds.csv")
+catfish<- read.csv("catfish_survival.csv")
+mosquito<- read.csv("mosquito_data.csv")
+seedSurv<- read.csv("SEEDLING_SURVIVAL.csv")
+
+
+# Question 1: Using Seedling Survival 
+plot(survival~HEIGHT,data=seedSurv,main='Seed Survival and Height',col="darkseagreen4",pch=19,
+     xlab="Seed Survival",ylab = "Seed Height")
+M1<-glm(survival~HEIGHT,data=seedSurv,family="binomial")
+coef(M1)
+curve(plogis(-0.06271111*x+0.140711),add=T)
+
+
+```
+
+(b)
+```{r, eco= false}
+# Question 1: Using Seedling Survival
+#(b)
+plot(seedSurv$survival~seedSurv$LIGHT,main='Seed Survival and Light',col="darkseagreen4",pch=19,
+     xlab="Seed Survival",ylab = "Amount of Light")
+M2<-glm(survival~LIGHT,data = seedSurv, family="binomial")
+coef(M2)
+curve(plogis(2.66194*x-0.06552),add=T)
+
+
+```
+Is height or light a stronger predictor of seedling survival?
+The amount of light a seed gets is a much stronger predictor of seedling survival compared to the seed height. 
+
+
+
+
+
+Queston 2: Dataset: Seeds.csv
+Predictor variable chosen: Light 
+
+```{r}
+#Binomial Regression
+proport<-(seeds$recruits/seeds$seeds) # make the data proportional; total sucesses/ total trials
+response<-cbind(seeds$recruits, seeds$seeds-seeds$recruits)
+
+plot(proport~seeds$light,main='Seed and Light Response',col="darkseagreen4",pch=19,
+     xlab="Amount of Light",ylab = "Seed Survival")
+M3<-glm(response~seeds$light,family="binomial")
+coef(M3)
+curve(plogis(-3.093+0.0798*x),add=T)
+
+
+
+```
+
+
+
+
+
+
+
+
+Question 3: mosquito data
+(a)&(b)  
+
+
+```{r}
+normEgg<- (mosquito$Emergent_adults/mosquito$Egg_Count)
+mosResponse<- cbind(mosquito$Emergent_adults, mosquito$Egg_Count-mosquito$Emergent_adults)
+plot(normEgg~mosquito$Detritus,main='Mosquito and Detritus Response',col="darkseagreen4",pch=19,
+     xlab="Amount of Detritus",ylab = "Mosquitos")
+
+M4<-glm(mosResponse~mosquito$Detritus,family="binomial")
+coef(M4)
+curve(plogis(1.321-0.3216083*x),add=T)
+curve(plogis(1.44-0.19*x-0.21*x^2+0.04*x^3), add=T,col="darkcyan")
+curve(plogis(-10*x*exp(1)^(-2*x)), add=T,col="brown4")
+
+```
+
+(c) How are the biological implicatons of the polynomial model different from the Ricker model? 
+The ricker model implies that the initally there is a lower impact of detritus initally on the number of moquitoes which starts to increase and then taper out. Where the polynomial model shows a constant negative relationship between the amount of detritius and the number of adult moquitos. 
+
+(d) 
+```{r}
+# Using the polynomial model 
+-sum(dbinom(x=mosquito$Emergent_adults,size=mosquito$Egg_Count,              
+prob=plogis(1.44-0.19*mosquito$Detritus-0.21*mosquito$Detritus^2+0.04*mosquito$Detritus^3),log=T))
+# Using the Ricker model 
+-sum(dbinom(x=mosquito$Emergent_adults,size=mosquito$Egg_Count,              
+prob=plogis(-10*mosquito$Detritus*exp(1)^(-2*mosquito$Detritus)),log=T))
+
+```
+
+
+(e) According to dbinom, the likelihood of the data is higher for the ricker model at a likelyhood of 2739.501 compared to a likelihood of 2739.501 for the polynomial model. 
+
+Question 4: Power Analysis 
+
+```{r}
+#1 predefine true slope, intercept and sd
+slope=-4
+inte = 7.56
+std=1.2
+#2 Create a predictor variable 
+pre<- seq(from=.36, to=0.87, length.out=98) # predictor variable 
+#3 Create a vector of sample size 
+sample_size<-c(3:100) #sample size 
+# Preallocate your vector to fill 
+power_vector<-rep(NA,times=97) # preallocate variable 
+P_value <- rep(NA,times=97) #preallocate variable 
+
+# 5 write for loop 
+for(i in 1:length(sample_size)) {
+  sim<-rnorm(n=sample_size[i],mean=inte+slope*pre[i],sd=0.8)
+  Model<-glm(sim~pre[1:(i+2)])
+  power_vector[i]<-coef(Model)[2]
+  P_value[i] <- summary(Model)$coefficients[4]
+ }
+
+plot(power_vector~sample_size)
+abline(h=-4)
+
+MSE=function(y,y_hat)
+{ 
+  return ((y-y_hat)^2)
+}
+true_slope <- rep(slope,length(sample_size))
+Ln_MAE <- MSE(power_vector,true_slope)
+
+plot(P_value~sample_size)
+
+```
+
+Binomal 
+
+
+```{r} 
+# Preallocate your vector to fill 
+power_Binom<-rep(NA,times=97) # preallocate variable 
+P_binom <-rep(NA,times=97) 
+# 5 write for loop 
+for(i in 1:length(sample_size)) {
+  fertalizer_amount <- seq(from=20, to=50, length.out=sample_size[i]) 
+  b_sim<-rbinom(n=sample_size[i],size=50,prob=plogis(inte+slope*fertalizer_amount))
+  Model_binom<-glm(b_sim~fertalizer_amount)
+  power_Binom[i]<-coef(Model_binom)[2]
+  P_binom[i] <- summary(Model_binom)$coefficients[2,4]
+ }
+
+plot(power_Binom~sample_size)
+abline(h=-4)
+
+Binom_MAE <- MSE(power_Binom,true_slope)
+
+```
+
+(a) For my linear regression I would need more than 20 samples. I could not get my bionomial regression to work correctly. 
+
+B. to ensure a p_value less than 0.05 I would have to run the samples for a much larger size. None of my Pvalues were around 0.5 
+
+C. In general, statical power is generally higher for continuous data compared to discrete because continous data should follow a gradient if it fits a model where discrete data is not going to fit any model well because it either is or isn't. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
